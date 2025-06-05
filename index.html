@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Réserve du Magasin</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    h1 {
+      text-align: center;
+    }
+    form, .stock, .login {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input, button, select {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      font-size: 16px;
+    }
+    .article {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    .article:last-child {
+      border-bottom: none;
+    }
+    .out-of-stock {
+      color: red;
+      font-weight: bold;
+    }
+    .top {
+      text-align: right;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login" id="login">
+    <h1>Connexion</h1>
+    <input type="text" id="username" placeholder="Nom d'utilisateur" required>
+    <input type="password" id="password" placeholder="Mot de passe" required>
+    <button onclick="login()">Se connecter</button>
+  </div>
+
+  <div id="app" style="display:none;">
+    <div class="top">
+      <button onclick="logout()">Se déconnecter</button>
+    </div>
+
+    <h1>Réserve du Magasin</h1>
+
+    <form id="addForm">
+      <input type="text" id="name" placeholder="Nom de l'article" required>
+      <input type="number" id="quantity" placeholder="Quantité" required min="0">
+      <input type="date" id="expiry" required>
+      <button type="submit">Ajouter / Mettre à jour</button>
+    </form>
+
+    <div class="stock" id="stockList"></div>
+  </div>
+
+  <script>
+    const USERS = [
+      { username: "admin", password: "1234" },
+      { username: "employe1", password: "abcd" },
+      { username: "employe2", password: "5678" }
+    ];
+
+    function login() {
+      const u = document.getElementById('username').value.trim();
+      const p = document.getElementById('password').value.trim();
+      const found = USERS.find(user => user.username === u && user.password === p);
+      if (found) {
+        localStorage.setItem('loggedInUser', u);
+        document.getElementById('login').style.display = "none";
+        document.getElementById('app').style.display = "block";
+        renderStock();
+      } else {
+        alert("Identifiants incorrects");
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('loggedInUser');
+      location.reload();
+    }
+
+    function renderStock() {
+      const list = document.getElementById('stockList');
+      list.innerHTML = '';
+      const data = JSON.parse(localStorage.getItem('stock') || '[]');
+      if (data.length === 0) {
+        list.innerHTML = "<p>Aucun article enregistré.</p>";
+        return;
+      }
+
+      data.forEach((item, i) => {
+        const div = document.createElement('div');
+        div.className = 'article';
+        div.innerHTML = `
+          <strong>${item.name}</strong><br>
+          Quantité: ${item.quantity > 0 ? item.quantity : '<span class="out-of-stock">RUPTURE</span>'}<br>
+          Date péremption: ${item.expiry}<br>
+          <button onclick="deleteItem(${i})">Supprimer</button>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    document.getElementById('addForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const quantity = parseInt(document.getElementById('quantity').value);
+      const expiry = document.getElementById('expiry').value;
+
+      if (!name || isNaN(quantity) || !expiry) return;
+
+      let data = JSON.parse(localStorage.getItem('stock') || '[]');
+      const index = data.findIndex(item => item.name.toLowerCase() === name.toLowerCase());
+
+      if (index >= 0) {
+        data[index].quantity = quantity;
+        data[index].expiry = expiry;
+      } else {
+        data.push({ name, quantity, expiry });
+      }
+
+      localStorage.setItem('stock', JSON.stringify(data));
+      renderStock();
+      this.reset();
+    });
+
+    function deleteItem(index) {
+      let data = JSON.parse(localStorage.getItem('stock') || '[]');
+      data.splice(index, 1);
+      localStorage.setItem('stock', JSON.stringify(data));
+      renderStock();
+    }
+
+    // Auto login si déjà connecté
+    if (localStorage.getItem('loggedInUser')) {
+      document.getElementById('login').style.display = "none";
+      document.getElementById('app').style.display = "block";
+      renderStock();
+    }
+  </script>
+</body>
+</html>
